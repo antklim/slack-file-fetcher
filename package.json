@@ -1,0 +1,15 @@
+{
+  "name": "slack-file-fetcher",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Anton Klimenko <antklim@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "NODE_ENV=test mocha ./*_test.js",
+    "zip": "zip -r build/slack-oauth.zip node_modules/ *.js *.json"
+  },
+  "devDependencies": {
+    "mocha": "^3.4.2",
+    "sinon": "^2.3.6"
+  }
+}
