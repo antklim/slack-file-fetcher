@@ -1,3 +1,4 @@
+const async = require('async')
 const request = require('request')
 
 const debug = (...args) => (process.env.DEBUG) ? console.log.apply(null, args) : null
@@ -8,10 +9,15 @@ exports.main = (data, cb) => {
 
   const token = exports._getAccessToken(process.env.NODE_ENV)
   const options = exports._getFileFetchOptions(data.url, token)
-  request.get(options, (err, res, body) => {
-    exports._fileFetchHandler(err, res, body, cb)
-  })
+
+  async.waterfall([
+    async.constant(options),
+    exports._fetchFile,
+    exports._saveFile
+  ], cb)
 }
+
+exports._getAccessToken = (env) => (env === 'test') ? 'test' : process.env.ACCESS_TOKEN
 
 exports._getFileFetchOptions = (url, accessToken) => ({
   url,
@@ -20,14 +26,19 @@ exports._getFileFetchOptions = (url, accessToken) => ({
   }
 })
 
-exports._fileFetchHandler = (err, res, body, cb) => {
-  if (err) {
-    error(err)
-    cb(err.message)
-    return
-  }
+exports._fetchFile = (options, cb) => {
+  request.get(options, (err, res, body) => {
+    if (err) {
+      error(err)
+      cb(err.message)
+      return
+    }
 
-  cb(null, body)
+    cb(null, body)
+  })
 }
 
-exports._getAccessToken = (env) => (env === 'test') ? 'test' : process.env.ACCESS_TOKEN
+exports._saveFile = (data, cb) => {
+  debug(data)
+  cb()
+}

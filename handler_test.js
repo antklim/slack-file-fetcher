@@ -12,23 +12,44 @@ describe('Slack file fetcher', function() {
 
   describe('main', () => {
     it('should prepare options for file fetcher and fetch file', (done) => {
-      const stub = sandbox.stub(request, 'get')
       const accessTokenSpy = sandbox.spy(handler, '_getAccessToken')
       const fetchOptionsSpy = sandbox.spy(handler, '_getFileFetchOptions')
-      const fetchHandlerSpy = sandbox.spy(handler, '_fileFetchHandler')
-      stub.callsArg(1)
+
+      const fetchFileSpy = sandbox.spy(handler, '_fetchFile')
+      const saveFileSpy = sandbox.spy(handler, '_saveFile')
+
+      const getStub = sandbox.stub(request, 'get')
+      getStub.callsArg(1)
 
       handler.main({url: 'https://test.com'}, (err) => {
         assert.ifError(err)
-        assert(stub.calledOnce)
         assert(accessTokenSpy.calledOnce)
+
         assert(fetchOptionsSpy.calledOnce)
-        assert(fetchHandlerSpy.calledOnce)
         assert.deepEqual(fetchOptionsSpy.args[0][0], 'https://test.com')
         assert.deepEqual(fetchOptionsSpy.args[0][1], 'test')
-        assert.deepEqual(stub.args[0][0], fetchOptionsSpy.returnValues[0])
+
+        assert(fetchFileSpy.calledOnce)
+        assert.deepEqual(fetchFileSpy.args[0][0], fetchOptionsSpy.returnValues[0])
+
+        assert(getStub.calledOnce)
+        assert.deepEqual(getStub.args[0][0], fetchOptionsSpy.returnValues[0])
+
+        assert(saveFileSpy.calledOnce)
+
         done()
       })
+    })
+  })
+
+  describe('_getAccessToken', () => {
+    before(() => process.env.ACCESS_TOKEN = '123')
+    after(() => process.env.ACCESS_TOKEN = '')
+
+    it('should return access token by environment', () => {
+      assert.equal(handler._getAccessToken('test'), 'test')
+      assert.equal(handler._getAccessToken('prod'), '123')
+      assert.equal(handler._getAccessToken('dev'), '123')
     })
   })
 
@@ -45,9 +66,12 @@ describe('Slack file fetcher', function() {
     })
   })
 
-  describe('_fileFetchHandler', () => {
+  describe('_fetchFile', () => {
     it('should return response body when request success', (done) => {
-      handler._fileFetchHandler(null, {response: true}, {body: 'yes'}, (err, body) => {
+      const stub = sandbox.stub(request, 'get')
+      stub.yields(null, {response: true}, {body: 'yes'})
+
+      handler._fetchFile({}, (err, body) => {
         assert.ifError(err)
         assert(body)
         assert.deepEqual(body, {body: 'yes'})
@@ -56,7 +80,10 @@ describe('Slack file fetcher', function() {
     })
 
     it('should return error callback when request failed', (done) => {
-      handler._fileFetchHandler(new Error('Fetch failed'), null, null, (err, body) => {
+      const stub = sandbox.stub(request, 'get')
+      stub.yields(new Error('Fetch failed'), null, null)
+
+      handler._fetchFile({}, (err, body) => {
         assert(err)
         assert.ifError(body)
         assert.equal(err, 'Fetch failed')
@@ -65,14 +92,8 @@ describe('Slack file fetcher', function() {
     })
   })
 
-  describe('_getAccessToken', () => {
-    before(() => process.env.ACCESS_TOKEN = '123')
-    after(() => process.env.ACCESS_TOKEN = '')
-
-    it('should return access token by environment', () => {
-      assert.equal(handler._getAccessToken('test'), 'test')
-      assert.equal(handler._getAccessToken('prod'), '123')
-      assert.equal(handler._getAccessToken('dev'), '123')
-    })
+  describe('_saveFile', () => {
+    it('should return callback when file successfully saved')
+    it('should return error callback when file save failed')
   })
 })
