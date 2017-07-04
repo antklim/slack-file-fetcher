@@ -6,7 +6,8 @@ const error = (...args) => (process.env.ERROR) ? console.error.apply(null, args)
 exports.main = (data, cb) => {
   debug(`Event data:\n${JSON.stringify(data, null, 2)}`)
 
-  const options = exports._getFileFetchOptions(data.url, 'test')
+  const token = exports._getAccessToken(process.env.NODE_ENV)
+  const options = exports._getFileFetchOptions(data.url, token)
   request.get(options, (err, res, body) => {
     exports._fileFetchHandler(err, res, body, cb)
   })
@@ -28,3 +29,5 @@ exports._fileFetchHandler = (err, res, body, cb) => {
 
   cb(null, body)
 }
+
+exports._getAccessToken = (env) => (env === 'test') ? 'test' : process.env.ACCESS_TOKEN

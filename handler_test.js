@@ -7,17 +7,13 @@ describe('Slack file fetcher', function() {
 
   let sandbox = null
 
-  beforeEach(() => {
-    sandbox = sinon.sandbox.create()
-  })
-
-  afterEach(() => {
-    sandbox.restore()
-  })
+  beforeEach(() => sandbox = sinon.sandbox.create())
+  afterEach(() => sandbox.restore())
 
   describe('main', () => {
     it('should prepare options for file fetcher and fetch file', (done) => {
       const stub = sandbox.stub(request, 'get')
+      const accessTokenSpy = sandbox.spy(handler, '_getAccessToken')
       const fetchOptionsSpy = sandbox.spy(handler, '_getFileFetchOptions')
       const fetchHandlerSpy = sandbox.spy(handler, '_fileFetchHandler')
       stub.callsArg(1)
@@ -25,6 +21,7 @@ describe('Slack file fetcher', function() {
       handler.main({url: 'https://test.com'}, (err) => {
         assert.ifError(err)
         assert(stub.calledOnce)
+        assert(accessTokenSpy.calledOnce)
         assert(fetchOptionsSpy.calledOnce)
         assert(fetchHandlerSpy.calledOnce)
         assert.deepEqual(fetchOptionsSpy.args[0][0], 'https://test.com')
@@ -65,6 +62,17 @@ describe('Slack file fetcher', function() {
         assert.equal(err, 'Fetch failed')
         done()
       })
+    })
+  })
+
+  describe('_getAccessToken', () => {
+    before(() => process.env.ACCESS_TOKEN = '123')
+    after(() => process.env.ACCESS_TOKEN = '')
+
+    it('should return access token by environment', () => {
+      assert.equal(handler._getAccessToken('test'), 'test')
+      assert.equal(handler._getAccessToken('prod'), '123')
+      assert.equal(handler._getAccessToken('dev'), '123')
     })
   })
 })
