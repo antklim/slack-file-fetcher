@@ -95,7 +95,7 @@ describe('Slack file fetcher', function() {
   })
 
   describe('_saveFile', () => {
-    it('should save file to file system when NODE_ENV is `test`')
+    it('should save file to file system when NODE_ENV is `dev`')
     it('should save file to S3 by default')
     it('should return error callback when file save failed')
   })

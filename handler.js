@@ -41,10 +41,8 @@ exports._fetchFile = (options, cb) => {
 }
 
 exports._saveFile = (res, body, cb) => {
-  debug(`Saving file with body: ${body}`)
-
   switch (process.env.NODE_ENV) {
-    case 'test':
+    case 'dev':
       exports._saveToFs(body, cb)
       break
     default:
@@ -55,7 +53,18 @@ exports._saveFile = (res, body, cb) => {
 
 exports._saveToFs = (data, cb) => {
   const fs = require('fs')
-  cb(null, 'saved')
+  const path = require('path')
+  const fileName = path.join(__dirname, `${Date.now()}.jpg`)
+
+  fs.writeFile(fileName, data, (err) => {
+    if (err) {
+      error(err)
+      cb(err.message)
+      return
+    }
+
+    cb(null, `saved to ${fileName}`)
+  })
 }
 
 exports._saveToS3 = (data, cb) => {

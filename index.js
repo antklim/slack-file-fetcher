@@ -9,7 +9,7 @@ exports.handler = (event, context, cb) => {
 
 }
 
-if (process.env.NODE_ENV === 'test') {
+if (process.env.NODE_ENV === 'dev') {
   const url = process.argv[2]
 
   console.log(`Sending request to: ${url}`)
