@@ -71,9 +71,11 @@ describe('Slack file fetcher', function() {
       const stub = sandbox.stub(request, 'get')
       stub.yields(null, {response: true}, {body: 'yes'})
 
-      handler._fetchFile({}, (err, body) => {
+      handler._fetchFile({}, (err, res, body) => {
         assert.ifError(err)
+        assert(res)
         assert(body)
+        assert.deepEqual(res, {response: true})
         assert.deepEqual(body, {body: 'yes'})
         done()
       })
@@ -93,7 +95,8 @@ describe('Slack file fetcher', function() {
   })
 
   describe('_saveFile', () => {
-    it('should return callback when file successfully saved')
+    it('should save file to file system when NODE_ENV is `test`')
+    it('should save file to S3 by default')
     it('should return error callback when file save failed')
   })
 })
