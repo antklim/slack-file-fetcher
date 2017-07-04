@@ -19,7 +19,7 @@ describe('Slack file fetcher', function() {
       const saveFileSpy = sandbox.spy(handler, '_saveFile')
 
       const getStub = sandbox.stub(request, 'get')
-      getStub.callsArg(1)
+      getStub.yields()
 
       handler.main({url: 'https://test.com'}, (err) => {
         assert.ifError(err)
@@ -57,6 +57,7 @@ describe('Slack file fetcher', function() {
     it('should prepare file fetcher options', () => {
       const expectedOptions = {
         url: 'https://test.com',
+        encoding: 'binary',
         headers: {
           'Authorization': `Bearer kraken`
         }
@@ -69,14 +70,14 @@ describe('Slack file fetcher', function() {
   describe('_fetchFile', () => {
     it('should return response body when request success', (done) => {
       const stub = sandbox.stub(request, 'get')
-      stub.yields(null, {response: true}, {body: 'yes'})
+      stub.yields(null, {response: true}, 'body')
 
       handler._fetchFile({}, (err, res, body) => {
         assert.ifError(err)
         assert(res)
         assert(body)
         assert.deepEqual(res, {response: true})
-        assert.deepEqual(body, {body: 'yes'})
+        assert.deepEqual(body, 'body')
         done()
       })
     })
@@ -95,8 +96,55 @@ describe('Slack file fetcher', function() {
   })
 
   describe('_saveFile', () => {
-    it('should save file to file system when NODE_ENV is `dev`')
-    it('should save file to S3 by default')
-    it('should return error callback when file save failed')
+    it('should save file to file system when NODE_ENV is `dev`', (done) => {
+      const env = process.env.NODE_ENV
+      process.env.NODE_ENV = 'dev'
+
+      const saveToFsStub = sandbox.stub(handler, '_saveToFs')
+      const saveToS3Stub = sandbox.stub(handler, '_saveToS3')
+      saveToFsStub.yields()
+      saveToS3Stub.yields()
+
+      handler._saveFile({response: true}, 'body', (err) => {
+        assert.ifError(err)
+
+        assert(saveToFsStub.calledOnce)
+        assert.equal(saveToFsStub.args[0][0], 'body')
+
+        assert(saveToS3Stub.notCalled)
+        process.env.NODE_ENV = env
+        done()
+      })
+    })
+
+    it('should save file to S3 by default', (done) => {
+      const saveToFsStub = sandbox.stub(handler, '_saveToFs')
+      const saveToS3Stub = sandbox.stub(handler, '_saveToS3')
+      saveToFsStub.yields()
+      saveToS3Stub.yields()
+
+      handler._saveFile({response: true}, 'body', (err) => {
+        assert.ifError(err)
+        assert(saveToFsStub.notCalled)
+        assert(saveToS3Stub.calledOnce)
+        assert.equal(saveToS3Stub.args[0][0], 'body')
+        done()
+      })
+    })
+
+    it('should return error callback when file save failed', (done) => {
+      const saveToFsStub = sandbox.stub(handler, '_saveToFs')
+      const saveToS3Stub = sandbox.stub(handler, '_saveToS3')
+      saveToFsStub.yields()
+      saveToS3Stub.yields(new Error('S3 save failed'))
+
+      handler._saveFile({response: true}, 'body', (err) => {
+        assert(err)
+        // TODO: it should be a text message
+        // will be fixed when S3 integration finished
+        assert.deepEqual(err, new Error('S3 save failed'))
+        done()
+      })
+    })
   })
 })

@@ -21,6 +21,7 @@ exports._getAccessToken = (env) => (env === 'test') ? 'test' : process.env.ACCES
 
 exports._getFileFetchOptions = (url, accessToken) => ({
   url,
+  encoding: 'binary',
   headers: {
     'Authorization': `Bearer ${accessToken}`
   }
@@ -56,7 +57,7 @@ exports._saveToFs = (data, cb) => {
   const path = require('path')
   const fileName = path.join(__dirname, `${Date.now()}.jpg`)
 
-  fs.writeFile(fileName, data, (err) => {
+  fs.writeFile(fileName, data, 'binary', (err) => {
     if (err) {
       error(err)
       cb(err.message)
