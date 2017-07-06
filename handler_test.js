@@ -61,7 +61,7 @@ describe('Slack file fetcher', function() {
     it('should prepare file fetcher options', () => {
       const expectedOptions = {
         url: 'https://test.com',
-        encoding: 'binary',
+        encoding: null,
         headers: {
           'Authorization': `Bearer kraken`
         }
