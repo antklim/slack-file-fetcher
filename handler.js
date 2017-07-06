@@ -1,8 +1,11 @@
+const aws = require('aws-sdk')
 const async = require('async')
 const request = require('request')
 
 const debug = (...args) => (process.env.DEBUG) ? console.log.apply(null, args) : null
 const error = (...args) => (process.env.ERROR) ? console.error.apply(null, args) : null
+
+const s3 = new aws.S3({apiVersion: 'latest'})
 
 exports.main = (data, cb) => {
   debug(`Event data:\n${JSON.stringify(data, null, 2)}`)
@@ -69,5 +72,22 @@ exports._saveToFs = (data, cb) => {
 }
 
 exports._saveToS3 = (data, cb) => {
-  cb(null, 'saved')
+  const options = {
+    Body: data,
+    Bucket: process.env.BUCKET,
+    Key: `${Date.now()}.jpg`
+   }
+
+   debug(`Saving to: ${options.Bucket}/${options.Key}`)
+
+   s3.putObject(options, (err, data) => {
+     if (err) {
+       error(err)
+       cb(err.message)
+       return
+     }
+
+     debug(data)
+     cb(null, `Saved to: ${options.Bucket}/${options.Key}`)
+   })
 }
