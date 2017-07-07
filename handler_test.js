@@ -22,9 +22,9 @@ describe('Slack file fetcher', function() {
       getStub.yields()
 
       const saveToS3Stub = sandbox.stub(handler, '_saveToS3')
-      saveToS3Stub.yields()
+      saveToS3Stub.yields(null, {file: 'test/file'})
 
-      handler.main({url: 'https://test.com'}, (err) => {
+      handler.main({eventId: 'testEvent', url: 'https://test.com', msg: 'testMsg'}, (err, data) => {
         assert.ifError(err)
         assert(accessTokenSpy.calledOnce)
 
@@ -40,6 +40,11 @@ describe('Slack file fetcher', function() {
 
         assert(saveFileSpy.calledOnce)
         assert(saveToS3Stub.calledOnce)
+
+        assert.equal(data.eventId, 'testEvent')
+        assert.equal(data.url, 'https://test.com')
+        assert.equal(data.msg, 'testMsg')
+        assert.equal(data.file, 'test/file')
 
         done()
       })

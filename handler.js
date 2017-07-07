@@ -1,3 +1,5 @@
+'use strict'
+
 const aws = require('aws-sdk')
 const async = require('async')
 const request = require('request')
@@ -7,6 +9,7 @@ const error = (...args) => (process.env.ERROR) ? console.error.apply(null, args)
 
 const s3 = new aws.S3({apiVersion: 'latest'})
 
+// data: {eventId, url, msg}
 exports.main = (data, cb) => {
   debug(`Event data:\n${JSON.stringify(data, null, 2)}`)
 
@@ -17,7 +20,16 @@ exports.main = (data, cb) => {
     async.constant(options),
     exports._fetchFile,
     exports._saveFile
-  ], cb)
+  ], (err, file) => {
+    if (err) {
+      error(err)
+      cb(err)
+      return
+    }
+
+    cb(null, Object.assign({}, data, file))
+    return
+  })
 }
 
 exports._getAccessToken = (env) => (env === 'test') ? 'test' : process.env.ACCESS_TOKEN
@@ -67,7 +79,8 @@ exports._saveToFs = (data, cb) => {
       return
     }
 
-    cb(null, `saved to ${fileName}`)
+    debug(`Saved to: ${fileName}`)
+    cb(null, {file: fileName})
   })
 }
 
@@ -87,7 +100,7 @@ exports._saveToS3 = (data, cb) => {
        return
      }
 
-     debug(data)
-     cb(null, `Saved to: ${options.Bucket}/${options.Key}`)
+     debug(`Saved to: ${options.Bucket}/${options.Key}`)
+     cb(null, {file: `${options.Bucket}/${options.Key}`})
    })
 }
