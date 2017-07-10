@@ -20,7 +20,7 @@ const error = (...args) => (ERROR) ? console.error.apply(null, args) : null
 const s3 = new aws.S3({apiVersion: 'latest'})
 const sns = new aws.SNS()
 
-// data: {eventId, url, msg}
+// data: {eventId, channel, url, msg}
 exports.main = (data, cb) => {
   debug(`Event data:\n${JSON.stringify(data, null, 2)}`)
 
@@ -34,7 +34,8 @@ exports.main = (data, cb) => {
   ], (err, file) => {
     if (err) {
       error(err)
-      exports._callSns({err, eventId: data.eventId})
+      const {eventId, channel} = data
+      exports._callSns({eventId, channel, err: err.message})
       cb(err)
       return
     }
