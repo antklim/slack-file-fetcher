@@ -6,10 +6,15 @@
   "license": "MIT",
   "scripts": {
     "test": "NODE_ENV=test mocha ./*_test.js",
-    "zip": "zip -r build/slack-file-fetcher.zip node_modules/ *.js *.json"
+    "build": "gulp"
   },
   "devDependencies": {
+    "del": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-yarn": "^1.0.0",
+    "gulp-zip": "^4.0.0",
     "mocha": "^3.4.2",
+    "run-sequence": "^2.0.0",
     "sinon": "^2.3.6"
   },
   "dependencies": {
