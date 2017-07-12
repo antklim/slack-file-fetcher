@@ -1,13 +1,19 @@
 // TODO: Add callSns test
 
 process.env.ACCESS_TOKEN = '123'
+process.env.BUCKET = 'testBucket'
 
 const assert = require('assert')
+const AWS = require('aws-sdk')
 const request = require('request')
 const sinon = require('sinon')
 const handler = require('./handler')
 
 describe('Slack file fetcher', function() {
+
+  const sns = new AWS.SNS()
+  const stepfunctions = new AWS.StepFunctions()
+  const aws = {sns, stepfunctions}
 
   let sandbox = null
 
@@ -28,7 +34,7 @@ describe('Slack file fetcher', function() {
       const saveToS3Stub = sandbox.stub(handler, '_saveToS3')
       saveToS3Stub.yields(null, {file: 'test/file'})
 
-      handler.main({eventId: 'testEvent', url: 'https://test.com', msg: 'testMsg'}, (err, data) => {
+      handler.main({eventId: 'testEvent', url: 'https://test.com', msg: 'testMsg'}, aws, (err, data) => {
         assert.ifError(err)
         assert(accessTokenSpy.calledOnce)
 
@@ -115,7 +121,7 @@ describe('Slack file fetcher', function() {
       saveToFsStub.yields()
       saveToS3Stub.yields()
 
-      handler._saveFile({response: true}, 'body', (err) => {
+      handler._saveFile(aws, {response: true}, 'body', (err) => {
         assert.ifError(err)
 
         assert(saveToFsStub.calledOnce)
@@ -133,11 +139,12 @@ describe('Slack file fetcher', function() {
       saveToFsStub.yields()
       saveToS3Stub.yields()
 
-      handler._saveFile({response: true}, 'body', (err) => {
+      handler._saveFile(aws, {response: true}, 'body', (err) => {
         assert.ifError(err)
         assert(saveToFsStub.notCalled)
         assert(saveToS3Stub.calledOnce)
-        assert.equal(saveToS3Stub.args[0][0], 'body')
+        assert.equal(saveToS3Stub.args[0][1], 'testBucket')
+        assert.equal(saveToS3Stub.args[0][2], 'body')
         done()
       })
     })
@@ -148,7 +155,7 @@ describe('Slack file fetcher', function() {
       saveToFsStub.yields()
       saveToS3Stub.yields(new Error('S3 save failed'))
 
-      handler._saveFile({response: true}, 'body', (err) => {
+      handler._saveFile(aws, {response: true}, 'body', (err) => {
         assert(err)
         // TODO: it should be a text message
         // will be fixed when S3 integration finished

@@ -1,6 +1,5 @@
 'use strict'
 
-const aws = require('aws-sdk')
 const async = require('async')
 const request = require('request')
 
@@ -17,31 +16,37 @@ const {DEBUG, ERROR, NODE_ENV, ACCESS_TOKEN, BUCKET, SLACK_INTEGRATOR_SNS} = pro
 const debug = (...args) => (DEBUG) ? console.log.apply(null, args) : null
 const error = (...args) => (ERROR) ? console.error.apply(null, args) : null
 
-const s3 = new aws.S3({apiVersion: 'latest'})
-const sns = new aws.SNS()
-
 // data: {eventId, channel, url, msg}
-exports.main = (data, cb) => {
+exports.main = (data, aws, cb) => {
   debug(`Event data:\n${JSON.stringify(data, null, 2)}`)
 
   const token = exports._getAccessToken(NODE_ENV)
   const options = exports._getFileFetchOptions(data.url, token)
 
   async.waterfall([
-    async.constant(options),
-    exports._fetchFile,
-    exports._saveFile
+    (cb) => exports._fetchFile(options, cb),
+    (res, body, cb) => exports._saveFile(aws, res, body, cb)
   ], (err, file) => {
-    if (err) {
-      error(err)
-      const {eventId, channel} = data
-      exports._callSns({eventId, channel, err: err.message})
-      cb(err)
+    if (!err) {
+      cb(null, Object.assign({}, data, file))
       return
     }
 
-    cb(null, Object.assign({}, data, file))
-    return
+    error(err)
+
+    const {eventId, channel} = data
+
+    // Sending file fetch error notification to SNS
+    exports._callSns(aws.sns, SLACK_INTEGRATOR_SNS, {eventId, channel, err: err.message}, (e) => {
+      if (e) {
+        error(`Notification publish to ${SLACK_INTEGRATOR_SNS} failed`)
+        error(e)
+      } else {
+        debug(`Notification successfully published to ${SLACK_INTEGRATOR_SNS}`)
+      }
+
+      cb(err)
+    })
   })
 }
 
@@ -68,13 +73,13 @@ exports._fetchFile = (options, cb) => {
   })
 }
 
-exports._saveFile = (res, body, cb) => {
+exports._saveFile = (aws, res, body, cb) => {
   switch (NODE_ENV) {
     case 'dev':
       exports._saveToFs(body, cb)
       break
     default:
-      exports._saveToS3(body, cb)
+      exports._saveToS3(aws.s3, BUCKET, body, cb)
       break
   }
 }
@@ -95,10 +100,10 @@ exports._saveToFs = (data, cb) => {
   })
 }
 
-exports._saveToS3 = (data, cb) => {
+exports._saveToS3 = (s3, bucket, data, cb) => {
   const options = {
     Body: data,
-    Bucket: BUCKET,
+    Bucket: bucket,
     Key: `${Date.now()}.jpg`
    }
 
@@ -115,21 +120,13 @@ exports._saveToS3 = (data, cb) => {
    })
 }
 
-exports._callSns = (notification) => {
-  debug(`Sending ${JSON.stringify(notification, null, 2)} to topic: ${SLACK_INTEGRATOR_SNS}`)
+exports._callSns = (sns, topic, notification, cb) => {
+  debug(`Sending ${JSON.stringify(notification, null, 2)} to topic: ${topic}`)
 
   const params = {
     Message: JSON.stringify(notification),
-    TopicArn: SLACK_INTEGRATOR_SNS
+    TopicArn: topic
   }
 
-  sns.publish(params, (err) => {
-    if (err) {
-      error(`Notification publish to ${SLACK_INTEGRATOR_SNS} failed`)
-      error(err)
-      return
-    }
-
-    debug(`Notification successfully published to ${SLACK_INTEGRATOR_SNS}`)
-  })
+  sns.publish(params, cb)
 }
