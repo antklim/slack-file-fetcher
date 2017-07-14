@@ -8,7 +8,7 @@ const sns = new aws.SNS()
 
 exports.handler = (event, context, cb) => {
 
-  handler.main(event, {s3, sns} cb)
+  handler.main(event, {s3, sns}, cb)
   return
 
 }
